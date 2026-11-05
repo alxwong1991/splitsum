@@ -1,8 +1,14 @@
 # SplitSum mobile
 
-The app currently displays the Flutter starter counter screen.
-Authentication and the manual bill workflow will be added incrementally.
-There is no mobile API integration yet.
+The app is a navigable Material 3 UI prototype with a teal theme:
+welcome/account-layout switching, demo groups, participant management,
+bill-entry layout, draft preview, and synthetic bill details.
+
+Tap **Explore demo** to navigate. Demo groups/participants exist only in memory
+and reset when leaving the demo. Credential fields are read-only; do not enter
+real credentials. Bills are not saved, and draft shares are not calculated.
+The example bill contains fixed synthetic shares, not live backend data.
+Authentication and product API integration will follow in Stage 1.
 
 Database readiness is a backend diagnostic, not a mobile product feature.
 Use Postman to call `GET http://localhost:3000/health/ready` as described in the
@@ -25,8 +31,8 @@ flutter analyze
 flutter test
 ```
 
-The current widget test covers the starter counter behavior. Product forms,
-API access, and their tests will be added with the manual workflow.
+Widget tests cover prototype screen navigation and input validation.
+Real API access and persistence tests will be added with the manual workflow.
 
 ## Future API integration
 

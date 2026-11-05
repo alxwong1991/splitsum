@@ -6,7 +6,7 @@ focused on a small, complete, tested manual workflow before adding
 AI-assisted receipt entry.
 
 **Status: early development.** The backend database foundation and equal-split
-calculation work. The mobile app is still the Flutter scaffold; the complete
+calculation work. The mobile app is a navigable synthetic-data UI prototype; the complete
 bill-splitting workflow is not available yet.
 
 ---
@@ -61,6 +61,9 @@ OpenAPI documentation is planned alongside the product APIs.
 
 Authentication, group/participant/bill APIs, mobile API access, and mobile
 credential storage are not implemented yet.
+
+Flutter previews welcome/account layouts, groups, participants, bill entry,
+and bill details. These screens do not authenticate or persist records.
 
 ---
 
@@ -138,7 +141,7 @@ splitsum/
       health/           # Live PostgreSQL readiness check
     test/               # HTTP and PostgreSQL integration tests
   mobile/
-    lib/                # Flutter starter screen
+    lib/                # Flutter app and synthetic-data UI prototype
     test/               # Flutter widget tests
     android/
     ios/
@@ -283,7 +286,7 @@ flutter devices
 flutter run
 ```
 
-This displays the starter counter screen, not the bill workflow.
+This displays the UI prototype, not a persisted bill workflow.
 The readiness check remains a backend-only diagnostic for Postman.
 Mobile API configuration will be added with the product workflow.
 Android emulators normally use `10.0.2.2` to reach a Mac backend; physical
@@ -321,7 +324,7 @@ flutter analyze
 flutter test
 ```
 
-Tests cover the Flutter scaffold. Product forms and an
+Tests cover UI prototype navigation and validation. Product API integration and an
 end-to-end manual workflow will receive tests as they are implemented.
 
 ---
