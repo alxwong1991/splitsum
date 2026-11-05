@@ -124,8 +124,28 @@ Only the split calculation is implemented at present. Persistence rules,
 ownership enforcement, retry-safe writes, and settlement rules will be wired
 into the product APIs incrementally.
 
-See the [backend documentation](./backend/README.md) for the proposed data model
-and detailed financial rules.
+### Proposed Data Model
+
+Only `Account` is migrated so far; the remaining entities are planned:
+
+| Entity | Essential fields |
+| --- | --- |
+| Account | ID, unique normalized email, password hash |
+| Group | ID, owner account ID, name, optional self-participant ID |
+| Participant | ID, group ID, name, immutable position, archived flag |
+| Bill | ID, group ID, payer participant ID, description, bill date, total cents, creation time |
+| BillShare | Bill ID, participant ID, amount cents; unique bill/participant pair |
+| IdempotencyRequest | Owner, operation, retry key, canonical request payload, resulting resource ID |
+
+Every protected read/write must check ownership. Group-scoped participant
+references must also be enforced by database constraints. A bill, its shares,
+and its retry record must be saved in one transaction. Reusing a retry key with
+different request contents must fail.
+
+Bill totals range from 1 to 2,147,483,647 cents. Zero-cent shares are valid when
+the total is smaller than the number of selected participants. Archiving does
+not reorder participants, and removing a settlement must not implicitly unlock
+historical bill editing.
 
 ---
 
