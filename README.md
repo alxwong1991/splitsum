@@ -5,9 +5,9 @@ Flutter, NestJS, and PostgreSQL. It is a personal product and portfolio project
 focused on a small, complete, tested manual workflow before adding
 AI-assisted receipt entry.
 
-**Status: early development.** The backend database foundation and equal-split
-calculation work. The mobile app is a navigable synthetic-data UI prototype; the complete
-bill-splitting workflow is not available yet.
+**Status: early development.** Mobile registration, login, and a private editable
+display name connect to NestJS and PostgreSQL. Groups and bills remain
+synthetic-data previews; the complete Stage 1 workflow is not available yet.
 
 ---
 
@@ -35,7 +35,7 @@ bill-splitting workflow is not available yet.
 
 The architecture is one feature-organized NestJS backend, not microservices.
 Flutter will communicate with REST APIs over HTTPS in production.
-OpenAPI documentation is planned alongside the product APIs.
+Authentication and account REST APIs are documented with OpenAPI.
 
 ---
 
@@ -51,21 +51,23 @@ OpenAPI documentation is planned alongside the product APIs.
 - Backend unit tests and real database persistence/rollback tests.
 - Backend email/password registration, login, and protected current-user API.
 - OpenAPI documentation, default-deny authentication, and auth rate limits.
+- Flutter registration/login, session restoration/expiry, and sign-out.
+- Private account screen with an editable display name saved in PostgreSQL.
+- Secure native token storage; browser previews keep tokens in memory only.
 
 ### Next: First Vertical Slice
 
-1. Connect Flutter to the implemented backend registration and sign-in.
-2. Create an owner-managed group.
-3. Add named participants, without requiring their registration.
-4. Enter a bill with one payer and select its split participants.
-5. Calculate equal shares in NestJS and save them atomically in PostgreSQL.
-6. Display the saved bill and shares in Flutter.
+1. Create an owner-managed group.
+2. Add named participants, without requiring their registration.
+3. Enter a bill with one payer and select its split participants.
+4. Calculate equal shares in NestJS and save them atomically in PostgreSQL.
+5. Display the saved bill and shares in Flutter.
 
-Group/participant/bill APIs, mobile API access, and mobile
-credential storage are not implemented yet.
+Group/participant/bill APIs are not implemented yet.
 
-Flutter previews welcome/account layouts, groups, participants, bill entry,
-and bill details. These screens do not authenticate or persist records.
+After signing in, Flutter lands on your real private account. The explicit
+**Explore demo groups** action opens sample groups, participants, bill entry,
+and bill details. Demo screens do not persist financial records.
 The UI uses Flutter's built-in Material 3 components; no third-party UI library
 is needed for the current layouts.
 Every screen's app bar has an **Appearance** menu with System, Light, and Dark.
@@ -137,7 +139,7 @@ into the product APIs incrementally.
 
 | Entity | Essential fields |
 | --- | --- |
-| Account | ID, unique normalized email, password hash |
+| Account | ID, unique normalized email, password hash, optional private display name |
 | Group | ID, owner account ID, name, optional self-participant ID |
 | Participant | ID, group ID, name, immutable position, archived flag |
 | Bill | ID, group ID, payer participant ID, description, bill date, total cents, creation time |
@@ -177,9 +179,16 @@ splitsum/
     lib/
       main.dart         # App entry point
       core/theme/       # Central colors, inputs, cards, and button styles
+      core/api/         # Shared HTTP client, configuration, and API errors
+      core/auth/        # Secure native and ephemeral browser token stores
       shared/widgets/   # Page layout, headers, cards, notes, person rows
       features/
-        auth/screens/
+        auth/
+          data/         # Authentication/account endpoints and response parsing
+          models/       # Account and authentication response
+          state/        # Session controller and inherited scope
+          screens/      # Authentication gate and login/register
+        account/screens/
         groups/screens/
         bills/
           screens/
@@ -219,6 +228,16 @@ explicitly separate from future API models. There is no global state-management
 or routing package yet; standard Flutter widgets and `Navigator` cover the
 prototype without adding dependencies. Future API/state integration can be
 introduced within each feature when the real manual workflow is implemented.
+
+### Flutter API Convention
+
+Keep shared HTTP transport in `mobile/lib/core/api/`: backend origin validation,
+HTTPS enforcement in release builds, JSON encoding/decoding, bearer headers,
+timeouts, and common HTTP errors. Feature `data/` files use the shared `ApiClient`
+and own endpoint paths, typed response parsing, and feature-specific messages.
+Models belong in the feature's `models/` folder; state coordinates API calls,
+loading, and errors without putting networking into screen widgets.
+Do not add a separate top-level `lib/api/` folder or empty feature layers.
 
 ---
 
@@ -364,6 +383,7 @@ POST http://localhost:3000/auth/register
 ```json
 {
   "email": "alex@example.invalid",
+  "displayName": null,
   "password": "Synthetic demo passphrase only!"
 }
 ```
@@ -406,10 +426,23 @@ for this request:
 GET http://localhost:3000/users/me
 ```
 
-It returns **200** with only your `id`, `email`, and `createdAt`.
+It returns **200** with only your `id`, `email`, `displayName`, and `createdAt`.
 Do not include the word `Bearer` in Postman's token input; Postman adds it.
 There is no public user list, profile directory, or account-by-ID endpoint.
 Do not sync tokens/passwords into shared Postman workspaces or export them.
+
+With the same bearer token, update your private display name:
+
+```http
+PATCH http://localhost:3000/users/me
+Content-Type: application/json
+
+{"displayName":"Alex"}
+```
+
+The trimmed name must contain 1-80 characters. Other account fields cannot be
+changed here. This name is visible only to you, not a public username or profile,
+and does not automatically rename group participants.
 
 | Check | Expected status |
 | --- | --- |
@@ -440,15 +473,41 @@ In another terminal, from the repository root:
 cd mobile
 flutter pub get
 flutter devices
-flutter run
+flutter run --dart-define=API_BASE_URL=http://localhost:3000
 ```
 
-This displays the UI prototype, not a persisted bill workflow.
-The readiness check remains a backend-only diagnostic for Postman.
-Mobile API configuration will be added with the product workflow.
-Android emulators normally use `10.0.2.2` to reach a Mac backend; physical
-devices need a reachable development host. Flutter never connects directly
+This connects registration, login, and the private account screen, not a persisted
+bill workflow. Readiness remains backend-only. Flutter never connects directly
 to PostgreSQL.
+
+| Target | Development API URL |
+| --- | --- |
+| iOS simulator | `http://localhost:3000` |
+| Android emulator | `http://10.0.2.2:3000` |
+| Physical device | `http://<Mac-LAN-IP>:3000` on the same trusted network |
+
+Android permits cleartext only in debug builds; iOS allows local networking.
+Release API configuration requires HTTPS. Do not expose the development server
+to the public internet.
+
+For Chrome, allow its exact origin when starting NestJS:
+
+```bash
+# From backend/
+CORS_ORIGIN=http://localhost:7357 npm run start:dev
+```
+
+```bash
+# From mobile/
+flutter run -d chrome --web-hostname=localhost --web-port=7357 \
+  --dart-define=API_BASE_URL=http://localhost:3000
+```
+
+Native sessions use `flutter_secure_storage` (Keychain on iOS, secure storage on
+Android). Browser previews intentionally keep bearer tokens in memory: reloading
+requires signing in again. `http` provides the small typed REST client; no extra
+state-management or UI framework is introduced.
+Sessions expire after 30 minutes; there is no refresh token.
 
 ---
 
@@ -486,8 +545,10 @@ flutter analyze
 flutter test
 ```
 
-Tests cover UI prototype navigation and validation. Product API integration and an
-end-to-end manual workflow will receive tests as they are implemented.
+Tests cover typed API responses/errors, session restoration and expiry, storage
+failures, authentication forms, private name editing, sign-out, demo navigation,
+themes, and narrow-screen layouts. An end-to-end financial workflow will receive
+tests when its product APIs are implemented.
 
 ---
 
@@ -523,11 +584,11 @@ end-to-end manual workflow will receive tests as they are implemented.
   limits; do not blindly trust arbitrary `X-Forwarded-For`.
 - Tokens expire after 30 minutes. No refresh, password reset, email verification,
   password change, or immediate token-revocation endpoint exists yet.
-  Future mobile logout will delete the token locally, but a copied token remains
+  Mobile sign-out deletes the token locally, but a copied token remains
   valid until expiry. Key rotation invalidates existing tokens.
 - Production must use HTTPS and properly managed environment secrets.
-  Postman uses HTTP only for local development. The Flutter auth screens remain
-  prototypes; secure mobile token storage is required before wiring real login.
+  HTTP is for local development only. Mobile bearer tokens use native secure
+  storage; browser previews use memory-only sessions, not localStorage.
 - Never log authorization headers, passwords, or complete auth response bodies.
   Operational errors must be investigated without copying credentials into logs.
 - Future AI provider keys stay on the backend. Receipt content will be treated

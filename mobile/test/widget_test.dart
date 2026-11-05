@@ -12,6 +12,8 @@ import 'package:mobile/features/groups/screens/group_screen.dart';
 import 'package:mobile/features/groups/screens/name_screen.dart';
 import 'package:mobile/features/groups/screens/participants_screen.dart';
 
+import 'auth_test_helpers.dart';
+
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.ensureVisible(find.text(text));
   await tester.tap(find.text(text));
@@ -22,8 +24,14 @@ void main() {
   testWidgets('account layouts switch and demo navigation shows sample bill', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
-    await tapText(tester, 'Preview create-account screen');
+    final session = testSession();
+    addTearDown(() {
+      session.dispose();
+      session.api.close();
+    });
+    await tester.pumpWidget(MyApp(session: session));
+    await tester.pumpAndSettle();
+    await tapText(tester, 'New here? Create account');
     expect(find.text('Confirm password'), findsOneWidget);
     await tapText(tester, 'Explore demo');
     await tapText(tester, 'Friday Dinner');
@@ -38,7 +46,13 @@ void main() {
   testWidgets('creates an in-memory group and adds a participant', (
     tester,
   ) async {
-    await tester.pumpWidget(const MyApp());
+    final session = testSession();
+    addTearDown(() {
+      session.dispose();
+      session.api.close();
+    });
+    await tester.pumpWidget(MyApp(session: session));
+    await tester.pumpAndSettle();
     await tapText(tester, 'Explore demo');
     await tapText(tester, 'Create demo group');
     await tapText(tester, 'Create demo group');

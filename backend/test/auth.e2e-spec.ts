@@ -56,7 +56,12 @@ describe('Authentication with PostgreSQL', () => {
     const email = newEmail();
     const auth = await register(`  ${email.toUpperCase()}  `);
     expect(auth.user.email).toBe(email);
-    expect(Object.keys(auth.user).sort()).toEqual(['createdAt', 'email', 'id']);
+    expect(Object.keys(auth.user).sort()).toEqual([
+      'createdAt',
+      'displayName',
+      'email',
+      'id',
+    ]);
     expect(auth.tokenType).toBe('Bearer');
     expect(auth.expiresIn).toBe(1800);
     const account = await prisma.account.findUniqueOrThrow({
@@ -226,6 +231,53 @@ describe('Authentication with PostgreSQL', () => {
       .get('/users/me')
       .auth(auth.accessToken, { type: 'bearer' })
       .expect(401);
+  });
+
+  it('updates only the authenticated private name and persists it across login', async () => {
+    const email = newEmail();
+    const owner = await register(email);
+    const other = await register();
+    const updated = await request(app.getHttpServer())
+      .patch('/users/me')
+      .auth(owner.accessToken, { type: 'bearer' })
+      .send({ displayName: '  Alex 陳  ' })
+      .expect(200);
+    expect(updated.body.displayName).toBe('Alex 陳');
+    expect(updated.body.passwordHash).toBeUndefined();
+    expect(
+      (await prisma.account.findUniqueOrThrow({ where: { id: owner.user.id } }))
+        .displayName,
+    ).toBe('Alex 陳');
+    await request(app.getHttpServer())
+      .get('/users/me')
+      .auth(other.accessToken, { type: 'bearer' })
+      .expect(200)
+      .expect((response) => expect(response.body.displayName).toBeNull());
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    expect(login.body.user.displayName).toBe('Alex 陳');
+    await request(app.getHttpServer())
+      .patch('/users/me')
+      .send({ displayName: 'Alex' })
+      .expect(401);
+    for (const body of [
+      {},
+      { displayName: '' },
+      { displayName: '   ' },
+      { displayName: null },
+      { displayName: 1 },
+      { displayName: 'x'.repeat(81) },
+      { displayName: 'Alex', id: other.user.id },
+      { displayName: 'Alex', email: other.user.email },
+    ]) {
+      await request(app.getHttpServer())
+        .patch('/users/me')
+        .auth(owner.accessToken, { type: 'bearer' })
+        .send(body)
+        .expect(400);
+    }
   });
 
   it('documents request/response models and bearer authentication', async () => {

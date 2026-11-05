@@ -5,6 +5,9 @@ import helmet from 'helmet';
 
 export function configureApp(app: NestExpressApplication): void {
   app.useBodyParser('json', { limit: '16kb' });
+  if (process.env.CORS_ORIGIN) {
+    app.enableCors({ origin: process.env.CORS_ORIGIN });
+  }
   app.use(helmet());
   app.useGlobalPipes(
     new ValidationPipe({

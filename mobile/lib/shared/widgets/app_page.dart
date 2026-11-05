@@ -9,11 +9,13 @@ class AppPage extends StatelessWidget {
     required this.title,
     required this.children,
     this.actions,
+    this.isDemo = true,
   });
 
   final String title;
   final List<Widget> children;
   final List<Widget>? actions;
+  final bool isDemo;
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -33,12 +35,13 @@ class AppPage extends StatelessWidget {
               children: [
                 ...children,
                 const SizedBox(height: 28),
-                const InfoNote(
-                  icon: Icons.science_outlined,
-                  text:
-                      'UI preview only. Synthetic data; no sign-in, payments, '
-                      'or database saves. Changes reset when you leave the demo.',
-                ),
+                if (isDemo)
+                  const InfoNote(
+                    icon: Icons.science_outlined,
+                    text:
+                        'UI preview only. Synthetic data; no sign-in, payments, '
+                        'or database saves. Changes reset when you leave the demo.',
+                  ),
               ],
             ),
           ),

@@ -12,6 +12,7 @@ import { Prisma } from '../generated/prisma/client';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { CredentialsDto } from './dto/credentials.dto';
 import { ACCESS_TOKEN_SECONDS } from './auth.constants';
+import { USER_SELECT } from '../users/users.service';
 
 @Injectable()
 export class AuthService implements OnModuleInit {
@@ -40,7 +41,7 @@ export class AuthService implements OnModuleInit {
     const user = await this.prisma.account
       .create({
         data: { email: credentials.email, passwordHash },
-        select: { id: true, email: true, createdAt: true },
+        select: USER_SELECT,
       })
       .catch((error: unknown) => {
         if (
@@ -69,6 +70,7 @@ export class AuthService implements OnModuleInit {
     return this.issueToken({
       id: account.id,
       email: account.email,
+      displayName: account.displayName,
       createdAt: account.createdAt,
     });
   }
