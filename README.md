@@ -260,6 +260,46 @@ podman --version
 podman compose version
 ```
 
+### macOS Terminal Setup
+
+If Node.js is installed through **fnm**, initialize it in `~/.zshrc` so new
+Terminal and VS Code terminal sessions can find `node` and `npm`:
+
+```zsh
+# Add once to ~/.zshrc, after any Homebrew PATH setup:
+eval "$(fnm env --use-on-cd --shell zsh)"
+```
+
+Reload the configuration and select your installed default Node version:
+
+```zsh
+source ~/.zshrc
+fnm list
+fnm use default
+node --version
+npm --version
+```
+
+If no default is configured, use `fnm default <installed-version>` to choose
+one from `fnm list`. If `fnm` itself cannot be found, check your Homebrew/PATH
+setup first. Do not reinstall Node just because a new shell cannot find it.
+Users of other Node managers should use that manager's shell initialization
+instead; do not initialize multiple managers together.
+
+Ensure your Flutter SDK's `bin` directory is also on your shell PATH, then run:
+
+```bash
+flutter doctor -v
+xcode-select -p
+xcodebuild -version
+```
+
+For iOS, install the full Xcode application, open it to finish first-launch
+setup, and install an iOS simulator runtime when prompted. Follow Flutter
+Doctor's guidance for any missing iOS tooling, including CocoaPods if required.
+If `xcode-select -p` points only to Command Line Tools, select your installed
+Xcode under **Xcode > Settings > Locations > Command Line Tools**.
+
 On macOS, Podman needs its Linux virtual machine:
 
 ```bash
@@ -473,8 +513,11 @@ In another terminal, from the repository root:
 cd mobile
 flutter pub get
 flutter devices
-flutter run --dart-define=API_BASE_URL=http://localhost:3000
+flutter run -d <device-id> --dart-define=API_BASE_URL=http://localhost:3000
 ```
+
+Replace `<device-id>` with the target ID printed by `flutter devices`, and use
+the target-specific backend URL below.
 
 This connects registration, login, and the private account screen, not a persisted
 bill workflow. Readiness remains backend-only. Flutter never connects directly
@@ -508,6 +551,58 @@ Android). Browser previews intentionally keep bearer tokens in memory: reloading
 requires signing in again. `http` provides the small typed REST client; no extra
 state-management or UI framework is introduced.
 Sessions expire after 30 minutes; there is no refresh token.
+
+### macOS: Test on an iOS Simulator with Device Hub
+
+In Xcode 27, use **Xcode > Open Developer Tool > Device Hub**, or choose
+**Manage Devices...** from the run-destination menu. Device Hub manages both
+simulated and physical devices; simulated iPhones are still supported.
+See Apple's [Device Hub guide](https://developer.apple.com/documentation/xcode/managing-your-simulated-and-physical-devices-in-device-hub).
+
+1. In Device Hub, select an iPhone simulator and start it. Use **+** to add one
+   if needed; install the matching runtime through Xcode if it is missing.
+2. Keep the Podman machine and SplitSum PostgreSQL container running.
+3. Keep `npm run start:dev` running in a terminal in `backend/`.
+4. In a separate terminal, from the repository root:
+
+```bash
+cd mobile
+flutter pub get
+flutter devices
+# Replace <device-id> with the running iPhone simulator's ID:
+flutter run -d <device-id> \
+  --dart-define=API_BASE_URL=http://localhost:3000
+```
+
+Older Xcode versions may expose the Simulator app and **Devices and Simulators**
+window instead. Do not select `macos` when you intend to test the iOS app.
+
+If the simulator does not appear, confirm it is started, run `flutter doctor -v`,
+and check the installed runtimes with `xcrun simctl list runtimes`.
+If sign-in cannot reach the server, first check
+`http://localhost:3000/health/ready` on your Mac. iOS simulators can use
+`localhost`; physical iPhones require your Mac's reachable LAN address.
+CORS configuration is needed for the Chrome preview, not native iOS requests.
+
+#### Manual Authentication Checklist
+
+- Register with a new synthetic email and a 15-128 character password.
+- Confirm the private account screen appears.
+- Save a display name, sign out, then sign back in and confirm it persists.
+- On native iOS, close and reopen the app before the 30-minute expiry to check
+  secure session restoration. Chrome reloads intentionally require sign-in.
+- Try incorrect credentials and confirm a clear error appears.
+- Open **Explore demo groups** and confirm the synthetic-data warning appears.
+
+Registration creates real local database records. Do not use real personal data
+for public demos. Groups and bills remain previews; this checklist verifies
+authentication, not the full Stage 1 financial workflow. Native iOS runtime
+behavior still needs device/simulator verification; a passing web build is not
+proof that native secure storage works.
+
+To finish testing, press `q` in the Flutter terminal and `Ctrl+C` in the backend
+terminal. Optionally run `podman compose stop postgres` from the repository root;
+this preserves the database volume.
 
 ---
 
