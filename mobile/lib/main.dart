@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'widgets/connection_check.dart';
-
 void main() {
   runApp(const MyApp());
 }
@@ -108,8 +106,6 @@ class _MyHomePageState extends State<MyHomePage> {
             // wireframe for each widget.
             mainAxisAlignment: .center,
             children: [
-              const ConnectionCheck(),
-              const SizedBox(height: 24),
               const Text('You have pushed the button this many times:'),
               Text(
                 '$_counter',

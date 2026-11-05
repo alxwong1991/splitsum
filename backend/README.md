@@ -167,12 +167,10 @@ to the same PostgreSQL container, not separate backend database infrastructure.
 Jest maps relative `.js` imports to source files so Prisma's generated
 TypeScript works with the existing ts-jest setup.
 
-Flutter now has an opt-in connection check calling `/health/ready`; product
-APIs are not wired yet. Set `API_BASE_URL` with Flutter's `--dart-define` flag.
-For Chrome, start NestJS with `CORS_ORIGIN=http://localhost:7357` and Flutter
-with `--web-hostname=localhost --web-port=7357`. CORS is otherwise disabled.
-See [mobile setup](../mobile/README.md). Local development uses HTTP and release
-builds require HTTPS; Flutter never connects directly to PostgreSQL.
+The readiness endpoint is backend-only for Postman and operational checks.
+Flutter product APIs are not wired yet. Future mobile integration will use
+explicit development configuration and HTTPS in production; Flutter will
+never connect directly to PostgreSQL. See [mobile setup](../mobile/README.md).
 Android emulators normally reach a Mac backend through
 `10.0.2.2`, while physical devices need a reachable development host rather
 than their own `localhost`.

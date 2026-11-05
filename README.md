@@ -6,7 +6,7 @@ focused on a small, complete, tested manual workflow before adding
 AI-assisted receipt entry.
 
 **Status: early development.** The backend database foundation and equal-split
-calculation work. The mobile app has a connection-check card alongside the Flutter scaffold; the complete
+calculation work. The mobile app is still the Flutter scaffold; the complete
 bill-splitting workflow is not available yet.
 
 ---
@@ -47,7 +47,6 @@ OpenAPI documentation is planned alongside the product APIs.
 - Isolated local PostgreSQL with a persistent volume.
 - Prisma connection and initial `Account` migration.
 - Database readiness endpoint for Postman or command-line checks.
-- Flutter connection-check card with configurable API URL and loading/error/retry states.
 - Integer-cent equal splitting with deterministic rounding.
 - Backend unit tests and real database persistence/rollback tests.
 
@@ -60,7 +59,7 @@ OpenAPI documentation is planned alongside the product APIs.
 5. Calculate equal shares in NestJS and save them atomically in PostgreSQL.
 6. Display the saved bill and shares in Flutter.
 
-Authentication, group/participant/bill APIs, authenticated mobile API access, and mobile
+Authentication, group/participant/bill APIs, mobile API access, and mobile
 credential storage are not implemented yet.
 
 ---
@@ -139,7 +138,7 @@ splitsum/
       health/           # Live PostgreSQL readiness check
     test/               # HTTP and PostgreSQL integration tests
   mobile/
-    lib/                # Flutter starter screen, health API, connection widget
+    lib/                # Flutter starter screen
     test/               # Flutter widget tests
     android/
     ios/
@@ -281,13 +280,12 @@ In another terminal, from the repository root:
 cd mobile
 flutter pub get
 flutter devices
-flutter run --dart-define=API_BASE_URL=http://localhost:3000
+flutter run
 ```
 
-This displays the starter counter screen with a **Check connection** card,
-not the bill workflow. The example URL works for an iOS simulator; use
-`http://10.0.2.2:3000` for an Android emulator.
-See [mobile setup](./mobile/README.md) for Chrome's exact-origin CORS configuration.
+This displays the starter counter screen, not the bill workflow.
+The readiness check remains a backend-only diagnostic for Postman.
+Mobile API configuration will be added with the product workflow.
 Android emulators normally use `10.0.2.2` to reach a Mac backend; physical
 devices need a reachable development host. Flutter never connects directly
 to PostgreSQL.
@@ -323,7 +321,7 @@ flutter analyze
 flutter test
 ```
 
-Tests cover the Flutter scaffold and connection-check API/UI states. Product forms and an
+Tests cover the Flutter scaffold. Product forms and an
 end-to-end manual workflow will receive tests as they are implemented.
 
 ---
