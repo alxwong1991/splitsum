@@ -2,7 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/main.dart';
 import 'package:mobile/prototype/demo_data.dart';
-import 'package:mobile/prototype/screens.dart';
+import 'package:mobile/features/bills/screens/add_bill_screen.dart';
+import 'package:mobile/features/bills/screens/sample_bill_screen.dart';
+import 'package:mobile/core/theme/app_theme.dart';
+import 'package:mobile/features/auth/screens/welcome_screen.dart';
+import 'package:mobile/features/bills/screens/draft_screen.dart';
+import 'package:mobile/features/groups/screens/groups_screen.dart';
+import 'package:mobile/features/groups/screens/group_screen.dart';
+import 'package:mobile/features/groups/screens/name_screen.dart';
+import 'package:mobile/features/groups/screens/participants_screen.dart';
 
 Future<void> tapText(WidgetTester tester, String text) async {
   await tester.ensureVisible(find.text(text));
@@ -98,5 +106,62 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+  });
+
+  final layouts = <String, Widget Function()>{
+    'welcome': () => const WelcomeScreen(),
+    'groups': () => const GroupsScreen(),
+    'group': () => GroupScreen(group: demoGroups().first),
+    'participants': () => ParticipantsScreen(group: demoGroups().first),
+    'create group': () => const NameScreen(group: true),
+    'add participant': () => const NameScreen(group: false),
+    'add bill': () => AddBillScreen(group: demoGroups().first),
+    'sample bill': () => const SampleBillScreen(),
+    'draft': () => DraftScreen(
+      description: 'Lunch with friends',
+      total: '100.00',
+      payer: 'Alex',
+      participants: const ['Bea', 'Chan'],
+      date: DateTime(2026, 11, 5),
+    ),
+  };
+
+  for (final layout in layouts.entries) {
+    testWidgets('${layout.key} uses app theme at 320px and 200% text', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+            child: layout.value(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('identifying yourself can be cleared without changing names', (
+    tester,
+  ) async {
+    final group = demoGroups().first;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: ParticipantsScreen(group: group),
+      ),
+    );
+    await tapText(tester, 'Bea');
+    expect(group.self, 'Bea');
+    await tapText(tester, 'Bea');
+    expect(group.self, isNull);
+    expect(group.participants, ['Alex', 'Bea', 'Chan']);
   });
 }
