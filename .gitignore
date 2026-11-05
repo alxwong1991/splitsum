@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+!.env.test.example
+node_modules/
+backend/dist/
+backend/coverage/
+backend/src/generated/
+*.tsbuildinfo
+.DS_Store
+*.log
+.idea/
+*.iml
+*.swp
+*.swo
