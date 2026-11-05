@@ -167,9 +167,13 @@ to the same PostgreSQL container, not separate backend database infrastructure.
 Jest maps relative `.js` imports to source files so Prisma's generated
 TypeScript works with the existing ts-jest setup.
 
-Flutter is not connected yet. It will call NestJS over HTTP during explicitly
-configured local development and HTTPS in production; it will never connect
-directly to PostgreSQL. Android emulators normally reach a Mac backend through
+Flutter now has an opt-in connection check calling `/health/ready`; product
+APIs are not wired yet. Set `API_BASE_URL` with Flutter's `--dart-define` flag.
+For Chrome, start NestJS with `CORS_ORIGIN=http://localhost:7357` and Flutter
+with `--web-hostname=localhost --web-port=7357`. CORS is otherwise disabled.
+See [mobile setup](../mobile/README.md). Local development uses HTTP and release
+builds require HTTPS; Flutter never connects directly to PostgreSQL.
+Android emulators normally reach a Mac backend through
 `10.0.2.2`, while physical devices need a reachable development host rather
 than their own `localhost`.
 
