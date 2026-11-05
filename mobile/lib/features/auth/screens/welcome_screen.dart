@@ -82,8 +82,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   enableSuggestions: false,
                   obscureText: _hidePassword,
                   validator: (value) =>
-                      value == null || value.length < 15 || value.length > 128
-                      ? 'Use 15-128 characters.'
+                      value == null || value.length < 8 || value.length > 128
+                      ? 'Use 8-128 characters.'
                       : null,
                   decoration: InputDecoration(
                     labelText: 'Password',

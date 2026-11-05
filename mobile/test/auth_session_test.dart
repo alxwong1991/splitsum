@@ -276,14 +276,8 @@ void main() {
       find.byType(TextFormField).at(0),
       'alex@example.invalid',
     );
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'synthetic passphrase!',
-    );
-    await tester.enterText(
-      find.byType(TextFormField).at(2),
-      'synthetic passphrase!',
-    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'abcdefgh');
+    await tester.enterText(find.byType(TextFormField).at(2), 'abcdefgh');
     await tap(tester, 'Create account');
     expect(find.text('Your account'), findsOneWidget);
     expect(find.text('Friday Dinner'), findsNothing);
@@ -324,10 +318,15 @@ void main() {
       find.byType(TextFormField).at(0),
       'alex@example.invalid',
     );
-    await tester.enterText(
-      find.byType(TextFormField).at(1),
-      'synthetic passphrase!',
-    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'abcdefg');
+    await tap(tester, 'Sign in');
+    expect(find.text('Use 8-128 characters.'), findsOneWidget);
+    expect(requests, 0);
+    await tester.enterText(find.byType(TextFormField).at(1), 'x' * 129);
+    await tap(tester, 'Sign in');
+    expect(find.text('Use 8-128 characters.'), findsOneWidget);
+    expect(requests, 0);
+    await tester.enterText(find.byType(TextFormField).at(1), 'abcdefgh');
     await tester.ensureVisible(find.text('Sign in'));
     await tester.tap(find.text('Sign in'));
     await tester.pump();

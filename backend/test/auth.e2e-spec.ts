@@ -145,6 +145,7 @@ describe('Authentication with PostgreSQL', () => {
     { email: 'not-an-email', password },
     { email: 42, password },
     { email: newEmail(), password: 'short' },
+    { email: newEmail(), password: 'x'.repeat(7) },
     { email: newEmail(), password: 'x'.repeat(129) },
     { email: newEmail(), password: 123456789012345 },
     { email: newEmail(), password, id: randomUUID() },
@@ -163,17 +164,21 @@ describe('Authentication with PostgreSQL', () => {
     },
   );
 
-  it('accepts a 15-character password without composition rules', async () => {
-    const email = newEmail();
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({ email, password: 'abcdefghijklmno' })
-      .expect(201);
-    await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password: 'abcdefghijklmno' })
-      .expect(200);
-  });
+  it.each([8, 128])(
+    'accepts a %i-character password without composition rules',
+    async (length) => {
+      const email = newEmail();
+      const boundaryPassword = 'a'.repeat(length);
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email, password: boundaryPassword })
+        .expect(201);
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email, password: boundaryPassword })
+        .expect(200);
+    },
+  );
 
   it('rejects missing/malformed/tampered/expired/wrong-audience tokens', async () => {
     const auth = await register();
@@ -294,6 +299,9 @@ describe('Authentication with PostgreSQL', () => {
       response.body.components.schemas.CredentialsDto.properties.password
         .writeOnly,
     ).toBe(true);
+    expect(
+      response.body.components.schemas.CredentialsDto.properties.password,
+    ).toMatchObject({ minLength: 8, maxLength: 128 });
     expect(
       response.body.components.schemas.UserResponseDto.properties.passwordHash,
     ).toBeUndefined();

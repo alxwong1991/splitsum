@@ -12,9 +12,9 @@ export class CredentialsDto {
   @MaxLength(254)
   email: string;
 
-  @ApiProperty({ minLength: 15, maxLength: 128, writeOnly: true })
+  @ApiProperty({ minLength: 8, maxLength: 128, writeOnly: true })
   @IsString()
-  @MinLength(15)
+  @MinLength(8)
   @MaxLength(128)
   password: string;
 }
