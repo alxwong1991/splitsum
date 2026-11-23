@@ -122,6 +122,25 @@ are setup steps; on later runs, start the database and use `npm run start:dev`.
 
 OpenAPI endpoints are development-only.
 
+### View the Database
+
+Prisma Studio provides a local browser interface, similar to Adminer. With
+PostgreSQL running, open a separate terminal from the project root:
+
+```bash
+cd backend
+npx prisma studio --port 5555
+```
+
+Open [http://localhost:5555](http://localhost:5555) and select **Account** to
+view registered users. Studio uses `DATABASE_URL` from `backend/.env`, normally
+the development database (`splitsum`), not `splitsum_test`.
+
+Studio can edit data, so use care and keep it local. Passwords are stored as
+hashes; don't edit or share them. Press `Ctrl+C` in the Studio terminal to stop it.
+If you see a Prisma version error, ensure the CLI and client versions in
+`backend/package.json` match, then run `npm install` in `backend/`.
+
 ## Run the Mobile App
 
 ### iOS on macOS
