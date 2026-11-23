@@ -37,7 +37,10 @@ class _MyAppState extends State<MyApp> {
           api: AuthApi(
             client: ApiClient(
               client: http.Client(),
-              baseUrl: const String.fromEnvironment('API_BASE_URL'),
+              baseUrl: const String.fromEnvironment(
+                'API_BASE_URL',
+                defaultValue: kDebugMode ? 'http://localhost:3000' : '',
+              ),
             ),
           ),
           store: kIsWeb ? EphemeralTokenStore() : SecureTokenStore(),

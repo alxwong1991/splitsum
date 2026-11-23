@@ -143,11 +143,12 @@ cd mobile
 flutter pub get
 flutter devices
 # Replace <device-id> with the running iPhone simulator's ID:
-flutter run -d <device-id> \
-  --dart-define=API_BASE_URL=http://localhost:3000
+flutter run -d <device-id>
 ```
 
-Choose the iPhone device ID, not the `macos` target.
+Choose the iPhone device ID, not the `macos` target. Debug builds default to
+`http://localhost:3000`, which reaches your Mac from the iOS simulator.
+Restart Flutter after changing the backend address.
 
 ### Other Targets
 
@@ -157,7 +158,13 @@ Choose the iPhone device ID, not the `macos` target.
 | Android emulator | `http://10.0.2.2:3000` |
 | Physical phone | `http://<Mac-LAN-IP>:3000` on the same trusted network |
 
-For Android or a physical phone, use its URL above in `API_BASE_URL`.
+For Android or a physical phone, override the default with its URL above:
+
+```bash
+flutter run -d <device-id> --dart-define=API_BASE_URL=http://10.0.2.2:3000
+```
+
+Use your Mac's LAN address instead of `10.0.2.2` for a physical phone.
 For Chrome, stop the existing backend and restart it from `backend/` with:
 
 ```bash
@@ -171,7 +178,9 @@ flutter run -d chrome --web-hostname=localhost --web-port=7357 \
   --dart-define=API_BASE_URL=http://localhost:3000
 ```
 
-HTTP is for local development only; release API configuration requires HTTPS.
+HTTP is for local development only; profile and release builds have no default
+URL. Supply `--dart-define=API_BASE_URL=https://your-backend.example` for release;
+release API configuration requires HTTPS.
 Do not expose the development server to the public internet.
 
 ## Try the App
