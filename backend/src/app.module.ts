@@ -7,6 +7,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { GroupsModule } from './groups/groups.module';
+import { BillsModule } from './bills/bills.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { HealthController } from './health/health.controller';
     DatabaseModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
     AuthModule,
+    GroupsModule,
+    BillsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

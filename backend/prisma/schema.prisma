@@ -9,9 +9,85 @@ datasource db {
 }
 
 model Account {
-  id           String   @id @default(uuid()) @db.Uuid
-  email        String   @unique @db.VarChar(254)
-  displayName  String?  @db.VarChar(80)
-  passwordHash String   @db.VarChar(255)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  id                  String               @id @default(uuid()) @db.Uuid
+  email               String               @unique @db.VarChar(254)
+  displayName         String?              @db.VarChar(80)
+  passwordHash        String               @db.VarChar(255)
+  createdAt           DateTime             @default(now()) @db.Timestamptz(3)
+  groups              Group[]
+  idempotencyRequests IdempotencyRequest[]
+}
+
+model Group {
+  id                      String        @id @default(uuid()) @db.Uuid
+  ownerId                 String        @db.Uuid
+  name                    String        @db.VarChar(80)
+  selfParticipantId       String?       @db.Uuid
+  nextParticipantPosition Int           @default(0)
+  createdAt               DateTime      @default(now()) @db.Timestamptz(3)
+  owner                   Account       @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  participants            Participant[] @relation("GroupParticipants")
+  selfParticipant         Participant?  @relation("SelfParticipant", fields: [id, selfParticipantId], references: [groupId, id], onDelete: NoAction, onUpdate: NoAction)
+  bills                   Bill[]
+
+  @@unique([id, selfParticipantId])
+  @@index([ownerId])
+}
+
+model Participant {
+  id          String      @id @default(uuid()) @db.Uuid
+  groupId     String      @db.Uuid
+  name        String      @db.VarChar(80)
+  position    Int
+  archived    Boolean     @default(false)
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  group       Group       @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Restrict)
+  selfOfGroup Group?      @relation("SelfParticipant")
+  paidBills   Bill[]      @relation("BillPayer")
+  shares      BillShare[]
+
+  @@unique([groupId, id])
+  @@unique([groupId, position])
+}
+
+model Bill {
+  id                 String              @id @default(uuid()) @db.Uuid
+  groupId            String              @db.Uuid
+  payerId            String              @db.Uuid
+  description        String              @db.VarChar(120)
+  billDate           DateTime            @db.Date
+  totalCents         Int
+  currency           String              @default("HKD") @db.Char(3)
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  group              Group               @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  payer              Participant         @relation("BillPayer", fields: [groupId, payerId], references: [groupId, id], onDelete: Restrict, onUpdate: NoAction)
+  shares             BillShare[]
+  idempotencyRequest IdempotencyRequest?
+
+  @@unique([groupId, id])
+  @@index([groupId, billDate, createdAt])
+}
+
+model BillShare {
+  billId        String      @db.Uuid
+  groupId       String      @db.Uuid
+  participantId String      @db.Uuid
+  amountCents   Int
+  bill          Bill        @relation(fields: [groupId, billId], references: [groupId, id], onDelete: Restrict, onUpdate: NoAction)
+  participant   Participant @relation(fields: [groupId, participantId], references: [groupId, id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([billId, participantId])
+}
+
+model IdempotencyRequest {
+  id        String  @id @default(uuid()) @db.Uuid
+  ownerId   String  @db.Uuid
+  operation String  @db.VarChar(40)
+  key       String  @db.VarChar(128)
+  payload   String  @db.Text
+  billId    String  @unique @db.Uuid
+  owner     Account @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  bill      Bill    @relation(fields: [billId], references: [id], onDelete: Restrict)
+
+  @@unique([ownerId, operation, key])
 }

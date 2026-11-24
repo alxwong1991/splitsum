@@ -4,9 +4,10 @@ A Hong Kong-friendly mobile app for splitting shared expenses, built as a
 **personal portfolio and learning project**. The goal is a small, tested manual
 bill workflow before introducing AI-assisted receipt entry.
 
-**Early development:** registration, login, and a private editable display name
-work through the backend. Groups and bills are synthetic-data previews, not
-saved financial records. AI receipt scanning is not implemented.
+**Early development:** authentication, a private display name, owner-managed
+groups/participants, and equal-split bill APIs are implemented in the backend.
+Mobile group and bill screens remain synthetic previews. Balances, settlements,
+and receipt scanning are not implemented.
 
 ## Tech Stack
 
@@ -40,7 +41,7 @@ NestJS controller → Service → Prisma → PostgreSQL
 
 ```text
 backend/
-  src/          # Feature modules: auth, users, bills, database, health
+  src/          # Feature modules: auth, users, groups, bills, database, health
   prisma/       # Database schema and versioned migrations
   test/         # HTTP/database integration tests
 mobile/
@@ -221,6 +222,68 @@ Postman endpoints:
 Names are private, trimmed, and 1-80 characters. Participants currently remain
 group-local names, not connected accounts.
 
+### Groups and Participants API
+
+These backend endpoints require the signed-in owner's bearer token. They can be
+tried in Postman or Swagger; the mobile demo is not connected yet. Replace IDs
+with values returned by the API.
+
+| Method | Path | JSON body |
+| --- | --- | --- |
+| POST | `/groups` | `{"name":"Friday Dinner"}` |
+| GET | `/groups` | — |
+| GET | `/groups/{groupId}` | — |
+| PATCH | `/groups/{groupId}` | `{"name":"Dinner"}` |
+| POST | `/groups/{groupId}/participants` | `{"name":"Alex"}` |
+| PATCH | `/groups/{groupId}/participants/{participantId}` | `{"name":"Alex Wong"}` |
+| PATCH | `/groups/{groupId}/participants/{participantId}/archive` | — |
+| PUT | `/groups/{groupId}/self` | `{"participantId":"<participant-uuid>"}` or `{"participantId":null}` |
+
+Group and participant names are trimmed and must be 1-80 characters; duplicate
+names are allowed. Group details include active and archived participants in
+stable creation order. Archiving is permanent for now and clears the self
+selection when applicable; archived participants cannot be renamed or selected
+as self. Group deletion is deferred. Unowned groups and participants return 404.
+
+Creation requests are not yet retry-safe: after a timeout, check the group list
+or details before retrying to avoid duplicate groups or participants.
+
+### Bills API
+
+These endpoints require the group owner's bearer token. Create participants
+first; their IDs are returned in group details.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/groups/{groupId}/bills` | Save an equally split HKD bill |
+| GET | `/groups/{groupId}/bills` | List bill history, newest bill date first |
+| GET | `/groups/{groupId}/bills/{billId}` | View a bill and its shares |
+
+For `POST`, set `Content-Type: application/json` and a unique
+`Idempotency-Key` header, for example `dinner-2026-11-24-1`. The key must be
+1-128 letters, digits, or `.`, `_`, `:`, `-`. Example body:
+
+```json
+{
+  "description": "Dinner",
+  "billDate": "2026-11-24",
+  "totalCents": 10000,
+  "payerId": "<payer-uuid>",
+  "participantIds": ["<participant-uuid>", "<another-participant-uuid>"]
+}
+```
+
+Replace the placeholders with active participants from the same group. The
+payer does not have to be included in the split. NestJS saves cents and
+calculates shares in participant creation order. Retrying the same request with
+the same key returns the existing bill; reusing that key for different input
+returns 409. Use a new key for each new bill. Names in history reflect current
+participant names, including archived participants.
+
+Bill editing/deletion and settlements are not available yet. Bill creation and
+history have not yet been tested; add and run financial and ownership tests
+before relying on them.
+
 <details>
 <summary>Authentication and security notes</summary>
 
@@ -287,8 +350,8 @@ need your Mac's reachable LAN address. Native requests do not require CORS.
 
 ## Next Steps and Financial Rules
 
-**Stage 1 next:** create a group → add participants → save an equal-split bill →
-display shares, then balances, manual settlements, and text sharing.
+**Stage 1 next:** test the financial and ownership APIs, connect groups and bills
+to mobile, then add balances, manual settlements, and text sharing.
 **Stage 2 later:** receipt-total extraction with user review and manual fallback.
 No payment processing, public profiles, collaborative groups, or currency
 conversion initially.
@@ -308,8 +371,8 @@ conversion initially.
   records transactionally; reject retry-key reuse with different input.
 - Bills range from 1 to 2,147,483,647 cents; zero-cent shares are allowed.
 
-Planned entities: owner-managed `Group`, ordered `Participant`, `Bill`,
-`BillShare`, `Settlement`, and `IdempotencyRequest`, linked to `Account`.
-Only equal-split calculation exists so far; financial persistence is next.
+`Group`, ordered `Participant`, `Bill`, `BillShare`, and bill
+`IdempotencyRequest` records are implemented in the backend. `Settlement` and
+derived balances are planned.
 
 </details>
