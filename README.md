@@ -4,10 +4,10 @@ A Hong Kong-friendly mobile app for splitting shared expenses, built as a
 **personal portfolio and learning project**. The goal is a small, tested manual
 bill workflow before introducing AI-assisted receipt entry.
 
-**Early development:** authentication, a private display name, owner-managed
-groups/participants, and equal-split bill APIs are implemented in the backend.
-Mobile group and bill screens remain synthetic previews. Balances, settlements,
-and receipt scanning are not implemented.
+**Early development:** authentication, owner-managed groups/participants,
+equal-split bills, direct balances, and manual settlements are implemented in
+the backend. Mobile group and bill screens remain synthetic previews; receipt
+scanning is not implemented.
 
 ## Tech Stack
 
@@ -41,7 +41,7 @@ NestJS controller → Service → Prisma → PostgreSQL
 
 ```text
 backend/
-  src/          # Feature modules: auth, users, groups, bills, database, health
+  src/          # Feature modules: auth, groups, bills, balances, settlements, etc.
   prisma/       # Database schema and versioned migrations
   test/         # HTTP/database integration tests
 mobile/
@@ -280,9 +280,40 @@ the same key returns the existing bill; reusing that key for different input
 returns 409. Use a new key for each new bill. Names in history reflect current
 participant names, including archived participants.
 
-Bill editing/deletion and settlements are not available yet. Bill creation and
-history have not yet been tested; add and run financial and ownership tests
-before relying on them.
+Bill editing/deletion is not available yet.
+
+### Balances and Settlements API
+
+These endpoints require the group owner's bearer token:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/groups/{groupId}/balances` | List outstanding direct debts in HKD cents |
+| GET | `/groups/{groupId}/settlements` | List manually recorded settlements |
+| POST | `/groups/{groupId}/settlements` | Record a payment made outside the app |
+
+For `POST`, provide a unique `Idempotency-Key` header using the same rules as
+bill creation, plus this JSON body:
+
+```json
+{
+  "fromParticipantId": "<person-who-owes-uuid>",
+  "toParticipantId": "<person-owed-uuid>",
+  "amountCents": 5000
+}
+```
+
+Only the debt from the payer to the recipient is reduced; opposite debts are
+not offset. Partial and full settlements are allowed, but overpayments and
+payments to the same person are rejected. Archived participants can settle
+existing debts. A retry with the same key and payload returns the existing
+settlement; different input with that key returns 409. Editing or deleting
+settlements is deferred. Once a settlement has existed, the group is permanently
+marked for the future bill editing/deletion lock.
+
+These APIs record payments; they do not transfer money or verify payment. The
+new group, bill, balance, and settlement endpoints have not yet been tested.
+Add financial and ownership tests before relying on them.
 
 <details>
 <summary>Authentication and security notes</summary>
@@ -350,8 +381,8 @@ need your Mac's reachable LAN address. Native requests do not require CORS.
 
 ## Next Steps and Financial Rules
 
-**Stage 1 next:** test the financial and ownership APIs, connect groups and bills
-to mobile, then add balances, manual settlements, and text sharing.
+**Stage 1 next:** test the financial and ownership APIs, connect groups, bills,
+balances and settlements to mobile, then add text sharing.
 **Stage 2 later:** receipt-total extraction with user review and manual fallback.
 No payment processing, public profiles, collaborative groups, or currency
 conversion initially.
@@ -371,8 +402,8 @@ conversion initially.
   records transactionally; reject retry-key reuse with different input.
 - Bills range from 1 to 2,147,483,647 cents; zero-cent shares are allowed.
 
-`Group`, ordered `Participant`, `Bill`, `BillShare`, and bill
-`IdempotencyRequest` records are implemented in the backend. `Settlement` and
-derived balances are planned.
+`Group`, ordered `Participant`, `Bill`, `BillShare`, `Settlement`, and
+`IdempotencyRequest` records are implemented in the backend. Balances are
+derived from bills and settlements rather than saved separately.
 
 </details>

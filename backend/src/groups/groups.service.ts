@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
+import { lockOwnedGroup } from './group-lock';
 
 const groupSelect = {
   id: true,
@@ -94,7 +95,7 @@ export class GroupsService {
     name: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      await this.lockGroup(tx, ownerId, groupId);
+      await lockOwnedGroup(tx, ownerId, groupId);
       const participant = await this.findParticipant(
         tx,
         groupId,
@@ -117,7 +118,7 @@ export class GroupsService {
     participantId: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      await this.lockGroup(tx, ownerId, groupId);
+      await lockOwnedGroup(tx, ownerId, groupId);
       await this.findParticipant(tx, groupId, participantId);
       await tx.group.updateMany({
         where: { id: groupId, selfParticipantId: participantId },
@@ -137,7 +138,7 @@ export class GroupsService {
     participantId: string | null,
   ) {
     return this.prisma.$transaction(async (tx) => {
-      await this.lockGroup(tx, ownerId, groupId);
+      await lockOwnedGroup(tx, ownerId, groupId);
       if (participantId !== null) {
         const participant = await this.findParticipant(
           tx,
@@ -156,18 +157,6 @@ export class GroupsService {
         select: groupSelect,
       });
     });
-  }
-
-  private async lockGroup(
-    tx: Prisma.TransactionClient,
-    ownerId: string,
-    groupId: string,
-  ) {
-    const updated = await tx.group.updateMany({
-      where: { id: groupId, ownerId },
-      data: { nextParticipantPosition: { increment: 0 } },
-    });
-    if (!updated.count) throw new NotFoundException('Group not found.');
   }
 
   private async findParticipant(

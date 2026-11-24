@@ -24,27 +24,31 @@ model Group {
   name                    String        @db.VarChar(80)
   selfParticipantId       String?       @db.Uuid
   nextParticipantPosition Int           @default(0)
+  hasEverHadSettlement    Boolean       @default(false)
   createdAt               DateTime      @default(now()) @db.Timestamptz(3)
   owner                   Account       @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   participants            Participant[] @relation("GroupParticipants")
   selfParticipant         Participant?  @relation("SelfParticipant", fields: [id, selfParticipantId], references: [groupId, id], onDelete: NoAction, onUpdate: NoAction)
   bills                   Bill[]
+  settlements             Settlement[]
 
   @@unique([id, selfParticipantId])
   @@index([ownerId])
 }
 
 model Participant {
-  id          String      @id @default(uuid()) @db.Uuid
-  groupId     String      @db.Uuid
-  name        String      @db.VarChar(80)
-  position    Int
-  archived    Boolean     @default(false)
-  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
-  group       Group       @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Restrict)
-  selfOfGroup Group?      @relation("SelfParticipant")
-  paidBills   Bill[]      @relation("BillPayer")
-  shares      BillShare[]
+  id                  String       @id @default(uuid()) @db.Uuid
+  groupId             String       @db.Uuid
+  name                String       @db.VarChar(80)
+  position            Int
+  archived            Boolean      @default(false)
+  createdAt           DateTime     @default(now()) @db.Timestamptz(3)
+  group               Group        @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Restrict)
+  selfOfGroup         Group?       @relation("SelfParticipant")
+  paidBills           Bill[]       @relation("BillPayer")
+  shares              BillShare[]
+  settlementsPaid     Settlement[] @relation("SettlementPayer")
+  settlementsReceived Settlement[] @relation("SettlementRecipient")
 
   @@unique([groupId, id])
   @@unique([groupId, position])
@@ -80,14 +84,31 @@ model BillShare {
 }
 
 model IdempotencyRequest {
-  id        String  @id @default(uuid()) @db.Uuid
-  ownerId   String  @db.Uuid
-  operation String  @db.VarChar(40)
-  key       String  @db.VarChar(128)
-  payload   String  @db.Text
-  billId    String  @unique @db.Uuid
-  owner     Account @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  bill      Bill    @relation(fields: [billId], references: [id], onDelete: Restrict)
+  id           String      @id @default(uuid()) @db.Uuid
+  ownerId      String      @db.Uuid
+  operation    String      @db.VarChar(40)
+  key          String      @db.VarChar(128)
+  payload      String      @db.Text
+  billId       String?     @unique @db.Uuid
+  settlementId String?     @unique @db.Uuid
+  owner        Account     @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  bill         Bill?       @relation(fields: [billId], references: [id], onDelete: Restrict)
+  settlement   Settlement? @relation(fields: [settlementId], references: [id], onDelete: Restrict)
 
   @@unique([ownerId, operation, key])
+}
+
+model Settlement {
+  id                 String              @id @default(uuid()) @db.Uuid
+  groupId            String              @db.Uuid
+  fromParticipantId  String              @db.Uuid
+  toParticipantId    String              @db.Uuid
+  amountCents        Int
+  createdAt          DateTime            @default(now()) @db.Timestamptz(3)
+  group              Group               @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  fromParticipant    Participant         @relation("SettlementPayer", fields: [groupId, fromParticipantId], references: [groupId, id], onDelete: Restrict, onUpdate: NoAction)
+  toParticipant      Participant         @relation("SettlementRecipient", fields: [groupId, toParticipantId], references: [groupId, id], onDelete: Restrict, onUpdate: NoAction)
+  idempotencyRequest IdempotencyRequest?
+
+  @@index([groupId, createdAt])
 }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { BillParticipantDto } from './bill-participant.dto';
+import { ParticipantReferenceDto } from '../../groups/dto/participant-reference.dto';
 import { BillShareDto } from './bill-share.dto';
 
 export class BillResponseDto {
@@ -24,8 +24,8 @@ export class BillResponseDto {
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt: Date;
 
-  @ApiProperty({ type: BillParticipantDto })
-  payer: BillParticipantDto;
+  @ApiProperty({ type: ParticipantReferenceDto })
+  payer: ParticipantReferenceDto;
 
   @ApiProperty({ type: [BillShareDto] })
   shares: BillShareDto[];

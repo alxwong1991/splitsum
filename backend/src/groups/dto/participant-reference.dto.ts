@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class BillParticipantDto {
+export class ParticipantReferenceDto {
   @ApiProperty({ format: 'uuid' })
   id: string;
 

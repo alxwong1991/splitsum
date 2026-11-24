@@ -2,11 +2,16 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
+import {
+  lockAccountForIdempotency,
+  requireIdempotencyKey,
+} from '../common/idempotency';
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
+import { lockOwnedGroup } from '../groups/group-lock';
 import { CreateBillDto } from './dto/create-bill.dto';
 import { splitEqually } from './equal-split';
 
@@ -43,11 +48,7 @@ export class BillsService {
     key: string | undefined,
     body: CreateBillDto,
   ) {
-    if (!key || !/^[A-Za-z0-9._:-]{1,128}$/.test(key)) {
-      throw new BadRequestException(
-        'Idempotency-Key must be 1-128 letters, digits, or . _ : - characters.',
-      );
-    }
+    const retryKey = requireIdempotencyKey(key);
 
     const billDate = new Date(`${body.billDate}T00:00:00.000Z`);
     if (
@@ -70,14 +71,10 @@ export class BillsService {
     });
 
     const result = await this.prisma.$transaction(async (tx) => {
-      // Serialize retries for this account, even when they target different groups.
-      const owner = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Account" WHERE "id" = ${ownerId}::uuid FOR UPDATE
-      `;
-      if (!owner.length) throw new UnauthorizedException('Account not found.');
+      await lockAccountForIdempotency(tx, ownerId);
 
       const previous = await tx.idempotencyRequest.findUnique({
-        where: { ownerId_operation_key: { ownerId, operation, key } },
+        where: { ownerId_operation_key: { ownerId, operation, key: retryKey } },
         select: { payload: true, billId: true },
       });
       if (previous) {
@@ -85,6 +82,9 @@ export class BillsService {
           throw new ConflictException(
             'Idempotency-Key was already used for a different request.',
           );
+        }
+        if (!previous.billId) {
+          throw new InternalServerErrorException('Invalid bill retry record.');
         }
         return tx.bill.findFirstOrThrow({
           where: {
@@ -96,12 +96,7 @@ export class BillsService {
         });
       }
 
-      // Participant changes take the same group lock.
-      const group = await tx.group.updateMany({
-        where: { id: normalizedGroupId, ownerId },
-        data: { nextParticipantPosition: { increment: 0 } },
-      });
-      if (!group.count) throw new NotFoundException('Group not found.');
+      await lockOwnedGroup(tx, ownerId, normalizedGroupId);
 
       const requiredIds = [...new Set([body.payerId, ...participantIds])];
       const participants = await tx.participant.findMany({
@@ -141,7 +136,7 @@ export class BillsService {
         })),
       });
       await tx.idempotencyRequest.create({
-        data: { ownerId, operation, key, payload, billId: bill.id },
+        data: { ownerId, operation, key: retryKey, payload, billId: bill.id },
       });
       return tx.bill.findUniqueOrThrow({
         where: { id: bill.id },

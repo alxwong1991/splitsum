@@ -1,9 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { BillParticipantDto } from './bill-participant.dto';
+import { ParticipantReferenceDto } from '../../groups/dto/participant-reference.dto';
 
 export class BillShareDto {
-  @ApiProperty({ type: BillParticipantDto })
-  participant: BillParticipantDto;
+  @ApiProperty({ type: ParticipantReferenceDto })
+  participant: ParticipantReferenceDto;
 
   @ApiProperty({ minimum: 0 })
   amountCents: number;

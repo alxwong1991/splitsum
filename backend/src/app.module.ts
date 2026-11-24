@@ -9,6 +9,8 @@ import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
 import { GroupsModule } from './groups/groups.module';
 import { BillsModule } from './bills/bills.module';
+import { BalancesModule } from './balances/balances.module';
+import { SettlementsModule } from './settlements/settlements.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { BillsModule } from './bills/bills.module';
     AuthModule,
     GroupsModule,
     BillsModule,
+    BalancesModule,
+    SettlementsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
