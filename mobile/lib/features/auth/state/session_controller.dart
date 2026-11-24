@@ -95,6 +95,27 @@ class SessionController extends ChangeNotifier {
   Future<void> updateName(String name) =>
       _accountOperation(() => api.updateName(_session!.token, name));
 
+  Future<T> withSession<T>(Future<T> Function(String token) operation) async {
+    final session = _session;
+    if (session == null || !session.expiresAt.isAfter(DateTime.now())) {
+      if (session != null) {
+        await _clear('Your session has ended. Please sign in again.');
+      }
+      throw const ApiException(
+        'Your session has ended. Please sign in again.',
+        status: 401,
+      );
+    }
+    try {
+      return await operation(session.token);
+    } on ApiException catch (failure) {
+      if (failure.status == 401 && identical(_session, session)) {
+        await _clear(failure.message);
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _accountOperation(Future<Account> Function() operation) async {
     if (busy || _session == null) return;
     busy = true;

@@ -55,13 +55,15 @@ class ApiClient {
         return http.Response.fromStream(streamed);
       })().timeout(const Duration(seconds: 12));
     } on TimeoutException {
-      throw const ApiException(
+      throw ApiException(
         'Request timed out. Changes may have completed. '
         'Check the result before retrying; for registration, try signing in.',
+        outcomeUnknown: method != 'GET',
       );
     } on http.ClientException {
-      throw const ApiException(
+      throw ApiException(
         'Cannot reach the backend. Check the network and server address.',
+        outcomeUnknown: method != 'GET',
       );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -71,13 +73,22 @@ class ApiClient {
         400 => 'Check your input. The server rejected these details.',
         _ => 'Server error (${response.statusCode}). Please try again.',
       };
-      throw ApiException(message, status: response.statusCode);
+      throw ApiException(
+        message,
+        status: response.statusCode,
+        outcomeUnknown:
+            method != 'GET' &&
+            (response.statusCode >= 500 || response.statusCode < 400),
+      );
     }
     if (response.statusCode == 204) return null;
     try {
       return jsonDecode(response.body);
     } on FormatException {
-      throw const ApiException('The backend returned an invalid response.');
+      throw ApiException(
+        'The backend returned an invalid response.',
+        outcomeUnknown: method != 'GET',
+      );
     }
   }
 

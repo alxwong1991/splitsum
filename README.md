@@ -4,10 +4,10 @@ A Hong Kong-friendly mobile app for splitting shared expenses, built as a
 **personal portfolio and learning project**. The goal is a small, tested manual
 bill workflow before introducing AI-assisted receipt entry.
 
-**Early development:** authentication, owner-managed groups/participants,
-equal-split bills, direct balances, and manual settlements are implemented in
-the backend. Mobile group and bill screens remain synthetic previews; receipt
-scanning is not implemented.
+**Early development:** authentication and group/participant management connect
+the mobile app to the backend. Equal-split bills, direct balances, and manual
+settlements are backend-only; mobile bill screens remain synthetic previews.
+Receipt scanning is not implemented.
 
 ## Tech Stack
 
@@ -34,7 +34,7 @@ NestJS controller → Service → Prisma → PostgreSQL
   call the backend through shared networking.
 - **NestJS:** controllers expose routes, DTOs validate requests, guards enforce
   authentication, and services own application rules.
-- **PostgreSQL:** stores accounts and, later, financial records. Prisma migrations
+- **PostgreSQL:** stores accounts, groups, and backend financial records. Prisma migrations
   track schema changes. NestJS remains authoritative for money calculations.
 
 ### Project Structure
@@ -208,7 +208,9 @@ Do not expose the development server to the public internet.
 1. Register with a synthetic email and an **8-128 character** password.
 2. Save a private display name, sign out, and sign in again.
 3. Try incorrect credentials to see the error state.
-4. Open **Explore demo groups** to explore the sample layouts.
+4. Open **Your groups** to create and rename real groups, add or rename
+   participants, select yourself, and archive participants.
+5. Open **Explore demo groups** separately to explore synthetic sample layouts.
 
 Postman endpoints:
 
@@ -224,9 +226,9 @@ group-local names, not connected accounts.
 
 ### Groups and Participants API
 
-These backend endpoints require the signed-in owner's bearer token. They can be
-tried in Postman or Swagger; the mobile demo is not connected yet. Replace IDs
-with values returned by the API.
+These backend endpoints require the signed-in owner's bearer token. Real group
+management in the mobile app uses them; the separate demo remains synthetic.
+They can also be tried in Postman or Swagger. Replace IDs with returned values.
 
 | Method | Path | JSON body |
 | --- | --- | --- |
@@ -246,7 +248,10 @@ selection when applicable; archived participants cannot be renamed or selected
 as self. Group deletion is deferred. Unowned groups and participants return 404.
 
 Creation requests are not yet retry-safe: after a timeout, check the group list
-or details before retrying to avoid duplicate groups or participants.
+or details before retrying to avoid duplicate groups or participants. The app
+requires a refresh after an uncertain write before allowing another change.
+An earlier request may still be processing, so wait and check again before
+retrying if its result is not yet visible.
 
 ### Bills API
 
@@ -312,8 +317,9 @@ settlements is deferred. Once a settlement has existed, the group is permanently
 marked for the future bill editing/deletion lock.
 
 These APIs record payments; they do not transfer money or verify payment. The
-new group, bill, balance, and settlement endpoints have not yet been tested.
-Add financial and ownership tests before relying on them.
+new group, bill, balance, and settlement endpoints and mobile group integration
+have not yet been tested. Add financial and ownership tests before relying on
+them.
 
 <details>
 <summary>Authentication and security notes</summary>
@@ -381,8 +387,8 @@ need your Mac's reachable LAN address. Native requests do not require CORS.
 
 ## Next Steps and Financial Rules
 
-**Stage 1 next:** test the financial and ownership APIs, connect groups, bills,
-balances and settlements to mobile, then add text sharing.
+**Stage 1 next:** test the financial and ownership APIs, connect bills, balances
+and settlements to mobile, then add text sharing.
 **Stage 2 later:** receipt-total extraction with user review and manual fallback.
 No payment processing, public profiles, collaborative groups, or currency
 conversion initially.

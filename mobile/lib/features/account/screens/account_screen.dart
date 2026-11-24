@@ -6,6 +6,7 @@ import '../../../shared/widgets/info_note.dart';
 import '../../../shared/widgets/page_header.dart';
 import '../../auth/state/session_scope.dart';
 import '../../groups/screens/groups_screen.dart';
+import '../../groups/screens/managed_groups_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -121,10 +122,22 @@ class _AccountScreenState extends State<AccountScreen> {
         const SizedBox(height: 24),
         const InfoNote(
           text:
-              'Account and name are saved. Groups and bills are not connected '
-              'yet. The preview below uses synthetic data, not your account.',
+              'Your groups and participants are saved. Bills are not connected '
+              'in the app yet. The separate demo uses synthetic data.',
         ),
         const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: session.busy
+              ? null
+              : () => Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const ManagedGroupsScreen(),
+                  ),
+                ),
+          icon: const Icon(Icons.groups_outlined),
+          label: const Text('Your groups'),
+        ),
+        const SizedBox(height: 8),
         OutlinedButton(
           onPressed: session.busy
               ? null
