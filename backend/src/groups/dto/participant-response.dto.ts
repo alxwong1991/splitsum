@@ -13,6 +13,9 @@ export class ParticipantResponseDto {
   @ApiProperty()
   archived: boolean;
 
+  @ApiProperty()
+  linkedAccount: boolean;
+
   @ApiProperty({ type: String, format: 'date-time' })
   createdAt: Date;
 }

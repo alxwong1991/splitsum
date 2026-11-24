@@ -11,6 +11,7 @@ import { GroupsModule } from './groups/groups.module';
 import { BillsModule } from './bills/bills.module';
 import { BalancesModule } from './balances/balances.module';
 import { SettlementsModule } from './settlements/settlements.module';
+import { InvitationsModule } from './invitations/invitations.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SettlementsModule } from './settlements/settlements.module';
     BillsModule,
     BalancesModule,
     SettlementsModule,
+    InvitationsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

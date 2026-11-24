@@ -7,6 +7,9 @@ export class GroupResponseDto {
   @ApiProperty()
   name: string;
 
+  @ApiProperty({ enum: ['owner', 'member'] })
+  role: 'owner' | 'member';
+
   @ApiProperty({ type: String, format: 'uuid', nullable: true })
   selfParticipantId: string | null;
 

@@ -6,8 +6,8 @@ bill workflow before introducing AI-assisted receipt entry.
 
 **Early development:** authentication and group/participant management connect
 the mobile app to the backend. Equal-split bills, direct balances, and manual
-settlements are backend-only; mobile bill screens remain synthetic previews.
-Receipt scanning is not implemented.
+settlements and registered-user invitations are backend-only; mobile bill
+screens remain synthetic previews. Receipt scanning is not implemented.
 
 ## Tech Stack
 
@@ -221,14 +221,14 @@ Postman endpoints:
 | GET | `/users/me` | Authorization: Bearer Token |
 | PATCH | `/users/me` | Bearer token; `{"displayName":"Alex"}` |
 
-Names are private, trimmed, and 1-80 characters. Participants currently remain
-group-local names, not connected accounts.
+Account display names are private. Group participant names are visible to the
+group owner and accepted members, trimmed, and 1-80 characters.
 
 ### Groups and Participants API
 
-These backend endpoints require the signed-in owner's bearer token. Real group
-management in the mobile app uses them; the separate demo remains synthetic.
-They can also be tried in Postman or Swagger. Replace IDs with returned values.
+These backend endpoints require a bearer token. Owners manage the group;
+accepted members can read it. The mobile app still uses the original owner-only
+interface and does not yet support invitations or member permissions.
 
 | Method | Path | JSON body |
 | --- | --- | --- |
@@ -245,7 +245,14 @@ Group and participant names are trimmed and must be 1-80 characters; duplicate
 names are allowed. Group details include active and archived participants in
 stable creation order. Archiving is permanent for now and clears the self
 selection when applicable; archived participants cannot be renamed or selected
-as self. Group deletion is deferred. Unowned groups and participants return 404.
+as self. Archiving an account-linked participant revokes group access but retains
+their financial history; rejoining is not supported yet. A joined member chooses
+their own group name on acceptance, and the owner cannot rename that participant.
+Group deletion is deferred. Inaccessible groups and participants return 404.
+
+The manual participant endpoint remains temporarily for the existing mobile
+app and is not an invitation. Existing named participants and their financial
+history are not automatically linked to registered accounts.
 
 Creation requests are not yet retry-safe: after a timeout, check the group list
 or details before retrying to avoid duplicate groups or participants. The app
@@ -253,10 +260,43 @@ requires a refresh after an uncertain write before allowing another change.
 An earlier request may still be processing, so wait and check again before
 retrying if its result is not yet visible.
 
+### Registered-User Invitations API
+
+The owner enters the exact email of an existing account. Invitations are shown
+in the recipient's in-app inbox; no email or push notification is sent. The
+recipient accepts with a group-specific name or declines. Accepting creates a
+new linked participant and does not transfer existing participants' debts.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/groups/{groupId}/invitations` | Owner invites using `{"email":"friend@example.invalid"}` |
+| GET | `/groups/{groupId}/invitations` | Owner lists sent invitations and statuses |
+| PATCH | `/groups/{groupId}/invitations/{invitationId}/cancel` | Owner cancels a pending invitation |
+| GET | `/invitations` | Recipient lists pending invitations |
+| POST | `/invitations/{invitationId}/accept` | Recipient joins using `{"name":"Sam"}` |
+| POST | `/invitations/{invitationId}/decline` | Recipient declines |
+
+Pending invitations do not expire automatically. Sending a duplicate pending
+invitation returns the existing one; cancelled or declined invitations can be
+sent again. A group can have only one participant per registered account.
+
+Accepted members can read the group, participants, all bills, balances, and
+settlements. Only the owner can change them. Group responses include `role`
+(`owner` or `member`) and the viewer's `selfParticipantId`.
+
+**Important:** Email addresses are not verified. An account email does not prove
+the person owns that address, and the invitation endpoint can reveal whether an
+email is registered despite its basic rate limit. Do not rely on this for
+sensitive data or public deployment. Invitation flow and role enforcement have
+not yet been tested. The mobile invitation inbox and role-aware controls are
+not implemented; members using the current UI may see owner-only actions that
+the backend rejects.
+
 ### Bills API
 
-These endpoints require the group owner's bearer token. Create participants
-first; their IDs are returned in group details.
+These endpoints require a bearer token. Owners create bills; owners and accepted
+members can read them. Create participants first; their IDs are returned in
+group details.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -289,7 +329,8 @@ Bill editing/deletion is not available yet.
 
 ### Balances and Settlements API
 
-These endpoints require the group owner's bearer token:
+Owners can record settlements; owners and accepted members can read balances
+and settlements:
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -387,11 +428,11 @@ need your Mac's reachable LAN address. Native requests do not require CORS.
 
 ## Next Steps and Financial Rules
 
-**Stage 1 next:** test the financial and ownership APIs, connect bills, balances
-and settlements to mobile, then add text sharing.
+**Stage 1 next:** test financial and access rules, connect invitations, bills,
+balances and settlements to mobile, then add text sharing.
 **Stage 2 later:** receipt-total extraction with user review and manual fallback.
-No payment processing, public profiles, collaborative groups, or currency
-conversion initially.
+No payment processing, public profile directory, collaborative editing, or
+currency conversion initially.
 
 <details>
 <summary>Agreed financial rules and planned data model</summary>

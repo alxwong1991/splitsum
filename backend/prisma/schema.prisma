@@ -16,42 +16,74 @@ model Account {
   createdAt           DateTime             @default(now()) @db.Timestamptz(3)
   groups              Group[]
   idempotencyRequests IdempotencyRequest[]
+  participants        Participant[]
+  invitations         GroupInvitation[]
 }
 
 model Group {
-  id                      String        @id @default(uuid()) @db.Uuid
-  ownerId                 String        @db.Uuid
-  name                    String        @db.VarChar(80)
-  selfParticipantId       String?       @db.Uuid
-  nextParticipantPosition Int           @default(0)
-  hasEverHadSettlement    Boolean       @default(false)
-  createdAt               DateTime      @default(now()) @db.Timestamptz(3)
-  owner                   Account       @relation(fields: [ownerId], references: [id], onDelete: Restrict)
-  participants            Participant[] @relation("GroupParticipants")
-  selfParticipant         Participant?  @relation("SelfParticipant", fields: [id, selfParticipantId], references: [groupId, id], onDelete: NoAction, onUpdate: NoAction)
+  id                      String            @id @default(uuid()) @db.Uuid
+  ownerId                 String            @db.Uuid
+  name                    String            @db.VarChar(80)
+  selfParticipantId       String?           @db.Uuid
+  nextParticipantPosition Int               @default(0)
+  hasEverHadSettlement    Boolean           @default(false)
+  createdAt               DateTime          @default(now()) @db.Timestamptz(3)
+  owner                   Account           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  participants            Participant[]     @relation("GroupParticipants")
+  selfParticipant         Participant?      @relation("SelfParticipant", fields: [id, selfParticipantId], references: [groupId, id], onDelete: NoAction, onUpdate: NoAction)
   bills                   Bill[]
   settlements             Settlement[]
+  invitations             GroupInvitation[]
 
   @@unique([id, selfParticipantId])
   @@index([ownerId])
 }
 
 model Participant {
-  id                  String       @id @default(uuid()) @db.Uuid
-  groupId             String       @db.Uuid
-  name                String       @db.VarChar(80)
+  id                  String           @id @default(uuid()) @db.Uuid
+  groupId             String           @db.Uuid
+  name                String           @db.VarChar(80)
   position            Int
-  archived            Boolean      @default(false)
-  createdAt           DateTime     @default(now()) @db.Timestamptz(3)
-  group               Group        @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Restrict)
-  selfOfGroup         Group?       @relation("SelfParticipant")
-  paidBills           Bill[]       @relation("BillPayer")
+  archived            Boolean          @default(false)
+  createdAt           DateTime         @default(now()) @db.Timestamptz(3)
+  accountId           String?          @db.Uuid
+  account             Account?         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  group               Group            @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: Restrict)
+  selfOfGroup         Group?           @relation("SelfParticipant")
+  paidBills           Bill[]           @relation("BillPayer")
   shares              BillShare[]
-  settlementsPaid     Settlement[] @relation("SettlementPayer")
-  settlementsReceived Settlement[] @relation("SettlementRecipient")
+  settlementsPaid     Settlement[]     @relation("SettlementPayer")
+  settlementsReceived Settlement[]     @relation("SettlementRecipient")
+  acceptedInvitation  GroupInvitation? @relation("AcceptedParticipant")
 
   @@unique([groupId, id])
   @@unique([groupId, position])
+  @@unique([groupId, accountId])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+model GroupInvitation {
+  id                    String           @id @default(uuid()) @db.Uuid
+  groupId               String           @db.Uuid
+  recipientId           String           @db.Uuid
+  status                InvitationStatus @default(PENDING)
+  acceptedParticipantId String?          @db.Uuid
+  acceptedName          String?          @db.VarChar(80)
+  createdAt             DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @db.Timestamptz(3)
+  group                 Group            @relation(fields: [groupId], references: [id], onDelete: Restrict)
+  recipient             Account          @relation(fields: [recipientId], references: [id], onDelete: Restrict)
+  acceptedParticipant   Participant?     @relation("AcceptedParticipant", fields: [groupId, acceptedParticipantId], references: [groupId, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([groupId, acceptedParticipantId])
+  @@index([recipientId, status])
+  @@index([groupId, recipientId])
 }
 
 model Bill {

@@ -17,6 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../database/prisma.service';
+import { Prisma } from '../generated/prisma/client';
+import { accessibleGroup } from '../groups/group-access';
 import { UserResponseDto } from '../users/dto/user-response.dto';
 import { calculateDirectBalances } from './direct-balances';
 import { BalanceResponseDto } from './dto/balance-response.dto';
@@ -38,11 +40,16 @@ export class BalancesController {
     @CurrentUser() user: UserResponseDto,
     @Param('groupId', ParseUUIDPipe) groupId: string,
   ) {
-    const group = await this.prisma.group.findFirst({
-      where: { id: groupId, ownerId: user.id },
-      select: { id: true },
-    });
-    if (!group) throw new NotFoundException('Group not found.');
-    return calculateDirectBalances(this.prisma, groupId);
+    return this.prisma.$transaction(
+      async (tx) => {
+        const group = await tx.group.findFirst({
+          where: { id: groupId, ...accessibleGroup(user.id) },
+          select: { id: true },
+        });
+        if (!group) throw new NotFoundException('Group not found.');
+        return calculateDirectBalances(tx, groupId);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 }

@@ -21,7 +21,7 @@ export function configureApp(app: NestExpressApplication): void {
     const config = new DocumentBuilder()
       .setTitle('SplitSum API')
       .setDescription(
-        'Backend MVP: authentication, groups, bills, balances, settlements, and readiness.',
+        'Backend MVP: authentication, invitations, groups, bills, balances, settlements, and readiness.',
       )
       .setVersion('0.1.0')
       .addBearerAuth()

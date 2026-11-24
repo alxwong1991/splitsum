@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { lockOwnedGroup } from '../groups/group-lock';
+import { accessibleGroup } from '../groups/group-access';
 import { CreateSettlementDto } from './dto/create-settlement.dto';
 
 const operation = 'settlement.create';
@@ -126,14 +127,14 @@ export class SettlementsService {
     });
   }
 
-  async list(ownerId: string, groupId: string) {
+  async list(accountId: string, groupId: string) {
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, ownerId },
+      where: { id: groupId, ...accessibleGroup(accountId) },
       select: { id: true },
     });
     if (!group) throw new NotFoundException('Group not found.');
     return this.prisma.settlement.findMany({
-      where: { groupId, group: { ownerId } },
+      where: { groupId, group: accessibleGroup(accountId) },
       select: settlementSelect,
       orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     });

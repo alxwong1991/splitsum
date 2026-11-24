@@ -12,6 +12,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { lockOwnedGroup } from '../groups/group-lock';
+import { accessibleGroup } from '../groups/group-access';
 import { CreateBillDto } from './dto/create-bill.dto';
 import { splitEqually } from './equal-split';
 
@@ -146,23 +147,23 @@ export class BillsService {
     return response(result);
   }
 
-  async list(ownerId: string, groupId: string) {
+  async list(accountId: string, groupId: string) {
     const group = await this.prisma.group.findFirst({
-      where: { id: groupId, ownerId },
+      where: { id: groupId, ...accessibleGroup(accountId) },
       select: { id: true },
     });
     if (!group) throw new NotFoundException('Group not found.');
     const bills = await this.prisma.bill.findMany({
-      where: { groupId, group: { ownerId } },
+      where: { groupId, group: accessibleGroup(accountId) },
       select: billSelect,
       orderBy: [{ billDate: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
     });
     return bills.map(response);
   }
 
-  async detail(ownerId: string, groupId: string, billId: string) {
+  async detail(accountId: string, groupId: string, billId: string) {
     const bill = await this.prisma.bill.findFirst({
-      where: { id: billId, groupId, group: { ownerId } },
+      where: { id: billId, groupId, group: accessibleGroup(accountId) },
       select: billSelect,
     });
     if (!bill) throw new NotFoundException('Bill not found.');
